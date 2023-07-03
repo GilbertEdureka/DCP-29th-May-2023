@@ -153,10 +153,10 @@ Day 9
 		
 			- Scripted Pipeline 
 			
-			- Declarative Pipeline
+			- Declarative Pipeline (uses yaml script)
 			
 pipeline {
-	agent any
+	agent any        --(the target envi where you will run the job)
 
 	stages {
 		stage('SCM Checkout') {
@@ -197,7 +197,7 @@ CICD Workflow ::::
 						Maven - Build Tool 
 							Install Maven ==> 
 							Maven Goals ==> Clean,package,test,build....
-							pom.xml ===> 
+							pom.xml ===> Maven uses it to perform build, Identifies the depedencies and for the java app
 			
 			Automated Unit Testing 
 			Deploy to QA Envi.
@@ -215,7 +215,7 @@ Configure Jenkins Master & Slave Machines..
 					Create User & SSH Keys
 
 		Attach the Slave Machine in Jenkins as a Node/Agent.
-				using SSH Key based Authentication
+				using SSH Key based Authentication(to establish connection btw the master and slave servers)
 				
 				- Password based 
 				- tokens based 
@@ -228,22 +228,24 @@ Configure Jenkins Master & Slave Machines..
 
 Java Maven Web Application ==> Project src code in github repo. 
 
-Configure Slave Node1 for Java Maven App. :
 
-	Install Java ::
+
+Install GIT : (BUT GIT IS ALREADY INSTALLED IN UBUNTU)
+
+	sudo apt install git -y
+        Configure Slave Node1 for Java Maven App. :
+
+Install Java :: (PREREQUISITE FOR MAVEN)
 
 	sudo apt update -y 
 	sudo apt install openjdk-11-jre -y
 	java -version
-
-	Install GIT :
-
-	sudo apt install git -y
-
-	Install Maven - Build Tool :
+Install Maven - Build Tool :
 	https://maven.apache.org/install.html
 
-	sudo apt install maven -y 
+	sudo apt install maven -y (IN UBUNTU)
+	mvn -version
+	FOR WINDOWS, U NEED TO DEFINE THE ENVI VARIABLES BEFORE INSTALLING
 
 
 Create User in Jenkins Slave Machine & Create SSH Keys 
@@ -253,39 +255,48 @@ Create User in Jenkins Slave Machine & Create SSH Keys
 
 #Add User : 
 
-#useradd -m -d /home/devopsadmin devopsadmin
-#useradd devopsadmin
+	#useradd -m -d /home/devopsadmin devopsadmin
+	 #useradd devopsadmin(OTHER DISTRIBUTION)
 
-useradd devopsadmin -s /bin/bash -m -d /home/devopsadmin
+	useradd devopsadmin -s /bin/bash -m -d /home/devopsadmin (FOR UBUNTU)
 
-su - devopsadmin
+su - devopsadmin (LOGIN TO THE USER)
+#PWD
 
-#ssh-keygen
+Create SSH Keys
+	#ssh-keygen
 
-#for Ubuntu ::
-ssh-keygen -t rsa -b 4096 -m PEM
+	#for Ubuntu ::
+	ssh-keygen -t rsa -b 4096 -m PEM  ---> ls -a 
+	
 
+	ls ~/.ssh 
 
-ls ~/.ssh 
+	#You should see following two files:
+cd .ssh --->ls	ll to see file and permission
+	#id_rsa - private key
+	#id_rsa.pub - public
+	
+	
+	cat id_rsa.pub > authorized_keys (CREATE AUTHORIZED KEY )
 
-#You should see following two files:
+GIVE admin PERMISSION TO DEVOPSADMIN USER TO ACCESS/read the FILE CONTENT
+	chown -R devopsadmin /home/devopsadmin/.ssh 
+	chmod 600 /home/devopsadmin/.ssh/authorized_keys
+        chmod 700 /home/devopsadmin/.ssh
+ll
 
-#id_rsa - private key
-#id_rsa.pub - public
-
-
-cat id_rsa.pub > authorized_keys
-
-chown -R devopsadmin /home/devopsadmin/.ssh
-chmod 600 /home/devopsadmin/.ssh/authorized_keys
-chmod 700 /home/devopsadmin/.ssh
-
-
+NOW Attach the Slave Machine in Jenkins as a Node/Agent.
+	GOTO JENKINS MASTER---> MANAGE JENKINS----> NODES AND CLOUDS--->NEW NODE (NODE NAME (JAVA_MVN-BUILD_SERVER))-- PERMANENT AGENT----> CREATE ---> CONFIGURATION PAGE (REMOTE ROOT DIRECTORY (/HOME/DEVOPSADMIN), LABEL(MVNBUILDSERVER1), LAUNCH METHOD((VIA SSH), HOST(PRIVATE IP OF HOST MACHINE),CREDENTIALS(ADD-->ADD CREDENTIALS--> KIND(SSH USERNAME WITH PRIVATE KEY) ID(MVNBUIDSERVER1CRED, just for ref)USERNAME(DEVOPSADMIN) PRIVATE KEY ---> ENTER DIRECTLY (GOTO SLAVE MACHINE, SIGN IN THE DEVOPSADMIN USER AND COPY THE PRIVATE KEY AND PASTE IN THE Key textbox ie CD .SSH---> LS---> CAT ID_RSA)ADD)), HOST KEY VERIFICATION STRATEGY( TO ENSURE THAT THE TARGET MACHINE IS A TRUSTED MACHINE(MANUALLY TRUSTED KEY VERIFICATION STRATEGY(It checks if the authorized key is the same as the public key in the slave achine)) ---> CHECK THE BOX FOR REQUIRE MANUAL..) ---SAVE.
+TO LAUNCH THE NODE--> CLICK ON THE NODE/AGENT---> TRUST SSH HOST KEY(ONETIME VERIFICATION)-->YES
 
 
 https://github.com/LoksaiETA/Java-mvn-app2.git ---> 
 
+TO RUN JOB IN SLAVE MACHINE, REPLACE AGENT AS ANY WITH THE LABEL FROM THE SLAVE WE CREATED
 
+SCM CHECKOUT STAGE--> Gotot to snippet generator----> select git----> put in the url for the repo--- select the branch--> generate script
+MAVEN BUILD STAGE --> Goto Manage jenkins---> tools --> scroll down to Maven (add Maven (name(maven)--> maven_home((/usr/share/maven)got the path from our slave node by using #maven -version) ---> save. Now goto pipelineand add the tool part (tool(
 pipeline {
 	agent { label 'mvnbuildserver1' }
 
