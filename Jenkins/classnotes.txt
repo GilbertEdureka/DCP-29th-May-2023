@@ -376,24 +376,22 @@ java -version
 
 #edit /etc/profile & add JAVA_HOME
 
-#/usr/lib/jvm/java-11-openjdk-amd64/
+#cd /usr/lib/jvm/java-11-openjdk-amd64/ ---> pwd---> copy the path
 
-vi /etc/profile
-
-/usr/lib/jvm/java-11-openjdk-amd64
-
-export JAVA_HOME="/usr/lib/jvm/java-11-openjdk-amd64"
-PATH=$PATH:$HOME/bin:$JAVA_HOME/bin
-
-source /etc/profile
+CREATE ENVIRONMENT VARIABLE BY EDITING THE FILE ( USE THE PATH INORDER TO MAKE TOMCAT ACCESS JAVA)
+	vi /etc/profile ---> ADD 
+	export JAVA_HOME="/usr/lib/jvm/java-11-openjdk-amd64"
+	PATH=$PATH:$HOME/bin:$JAVA_HOME/bin
+	source /etc/profile
 
 Install Tomcat ::
+	GO TO GOOGLE -->TOMCAT.APACHE.ORG---> DOWNLOWDS--->VERSION8---> RIGHT CLICK ON TARZ.GZ(https://dlcdn.apache.org/tomcat/tomcat-8/v8.5.88/bin/apache-tomcat-8.5.88.tar.gz)
+	cd /opt
+	wget https://dlcdn.apache.org/tomcat/tomcat-8/v8.5.88/bin/apache-tomcat-8.5.88.tar.gz (TO DOWNLOWD FILE)
+	tar -xvzf /opt/apache-tomcat-8.5.88.tar.gz (TO EXTRACT FILE)
 
-cd /opt
-wget https://dlcdn.apache.org/tomcat/tomcat-8/v8.5.88/bin/apache-tomcat-8.5.88.tar.gz
-tar -xvzf /opt/apache-tomcat-8.5.88.tar.gz
-
-mv apache-tomcat-8.5.88 tomcat
+	mv apache-tomcat-8.5.88 tomcat (CHANGE THE FOLDER NAME TO TOMCAT)
+	LS --> CD TOMCAT/BIN/--> WE SEE FOLDER ((STARTUP SSH) USED TO STARTUP THE TOMCAT SERVER)
 
 #Start Tomcat Server:
 #Goto:
@@ -404,31 +402,77 @@ cd /opt/tomcat/bin
 
 ###########################################333
 
-				Create User 
-				Create SSH key in tomcat server 
+		Create User 
+		Create SSH key in tomcat server 
+	
+
+
+#Add User : 
+
+	#useradd -m -d /home/devopsadmin devopsadmin
+	 #useradd devopsadmin(OTHER DISTRIBUTION)
+
+	useradd devopsadmin -s /bin/bash -m -d /home/devopsadmin (FOR UBUNTU)
+
+su - devopsadmin (LOGIN TO THE USER)
+#PWD
+
+Create SSH Keys
+	#ssh-keygen
+
+	#for Ubuntu ::
+	ssh-keygen -t rsa -b 4096 -m PEM  ---> ls -a 
+	
+
+	ls ~/.ssh 
+
+	#You should see following two files:
+cd .ssh --->ls	ll to see file and permission
+	#id_rsa - private key
+	#id_rsa.pub - public
+	
+	
+	cat id_rsa.pub > authorized_keys (CREATE AUTHORIZED KEY )
+
+GIVE admin PERMISSION TO DEVOPSADMIN USER TO ACCESS/read the FILE CONTENT/AUTHORIZED KEY
+	chown -R devopsadmin /home/devopsadmin/.ssh 
+	chmod 600 /home/devopsadmin/.ssh/authorized_keys
+    chmod 700 /home/devopsadmin/.ssh
+
 				
+sshPublisher(publishers: [sshPublisherDesc(configName: 'TomcatServer', transfers: [sshTransfer(cleanRemote: false, excludes: '', execCommand: '', execTimeout: 120000, flatten: false, makeEmptyDirs: false, noDefaultExcludes: false, patternSeparator: '[, ]+', remoteDirectory: '.', remoteDirectorySDF: false, removePrefix: 'target/', sourceFiles: 'target/mvn-hello-world.war')], usePromotionTimestamp: false, useWorkspaceInPromotion: false, verbose: false)])
+
 				
-			Deployment means??
+		Deployment means(MOVING ARTIFACTS FROM ONE ENVI, SOURCE TO ANOTHER, TARGET)
 			
 			
 			Source Path	: target/mvn-hello-world.war
 			
 			Destination Path : /opt/tomcat/webapps/mvn-hello-world.war
 												/opt/tomcat/webapps/target/mvn-hello-world.war
+			CD ..-->CD /OPT/TOMCAT/--->LS -->CD WEBAPPS/ (PERMISSION DENIED (WE NEED TO HAVE ROOT USER ACCESS))	
+				     chown -R devopsadmin /OPT/TOMCAT/WEBAPPS---> LL--->SU - DEVOPSADMIN
+					 
+Add Tomcat Server to Jenkins Master with valid private key of tomcat user				
+CAT id_rsa - private key				 
+		In Jenkins :
+				Install Publish Over SSH Plugins (TO ADD TOMCAT TO JENKINS)
+						go to manage Jenkins -> Plugin Manager -> Available tab -> search for Publish over SSH Plugin --->
+						Restart jenkins upon installation(ONLY AFTER RESTART BEFORE JENKINS CAN RECOGNIZE PLUGINS FOR CONFIGURATION) --->
+						LOGIN BACK TO JENKINS AFTER RESTART
 				
 				
-			In Jenkins :
-				Install Publish Over SSH Plugins 
-						got to manage Jenkins -> Plugin Manager -> 
-						Available tab -> search for Publish over SSH Plugin
-										Restart jenkins upon installation. 
-				
-				
-					Add Tomcat Server to Jenkins Master with valid private key of tomcat user
-				
-sshPublisher(publishers: [sshPublisherDesc(configName: 'TomcatServer', transfers: [sshTransfer(cleanRemote: false, excludes: '', execCommand: '', execTimeout: 120000, flatten: false, makeEmptyDirs: false, noDefaultExcludes: false, patternSeparator: '[, ]+', remoteDirectory: '.', remoteDirectorySDF: false, removePrefix: 'target/', sourceFiles: 'target/mvn-hello-world.war')], usePromotionTimestamp: false, useWorkspaceInPromotion: false, verbose: false)])
-
-
+				CONFIGURE TOMCAT
+						JENKINS MASTER--> SYSTEM--->PUBLISH OVER SSH-->
+								SSH SERVERS-->ADD--->SSH SERVER 
+														NAME (TOMCAT)-->HOSTNAME(PRIVATE IP FOR TOMCAT) USERNAME(DEVOPSADMIN)-->
+														REMOTE DIRECTORY(TARGET PATH(/OPT/TOMCAT/WEBAPPS))---> ADVANCED(CHECK BOX "USE PASSWRD AUTH OR DIFFRNT KEY)
+														--->DEVOPSADIN---> CD ./SSH--->LS--->CAT ID_RSA (COPY AND PASTE THE KEY IN KEY TEXTBOX)--->TEST CONFIGURATION
+				ONCE TONCAT IS CONFIGURED
+					IN JENKINS--->DASHBOARD--->SELECT THE PIPELINE YOU WANT TO ADD THE STEP-->
+						CONFIGURE--->PIPELINE--->PIPELINE SCRIPT --->PIPELINE SYNTAX--->SAMPLE STEPS--->SSH PUBLISHER
+						-->SSH SERVER(NAME(TOMCAT))--->TRANSFERS--->SOURCE FILES(target/mvn-hello-world.war) --->
+						    REMOTE DIRECTORY(USE "." TO REFER TO THE CURRENT DIRECTORY)-->REMOVE PREFIX((TARGET/) SO NOT SUBFOLDER IS CREATED) --->GENERATE PIPELINE SCRIPT
 
 pipeline {
 	agent { label 'mvnbuildserver1' }
@@ -484,7 +528,9 @@ pipeline {
 		}
 	}
 }
-
+AFTER RUNNING OUR SCRIPT/PIPELINE --> WE CAN LOGIN TO OUR TERMINAL--->SUDO -I --->SU DEVOPSADMIN---> CD /OPT/TOMCAT/WEBAPPS/--->LL---> WE SEE OUR .WAR FILE.
+		TO RUN OUR APP THROUGH TOMCAT--->(PUBLIC IP:8080/ARTIFACT NAME)
+							PUBLIC IP:8080/MVN-HELLO-WORLD
 
 
 
@@ -518,10 +564,13 @@ pipeline {
 				
 				for each commit, the pipeline will get triggered. 
 				
+	NB: TO USE POLL SCM OR GIT WEBHOOK, GIT HAS TO BE INSTALLED IN JENKINS MASTER
+				
 		Notification ::::
 			-- 
 		Email - Notification Plugins ::::
 		
+
 Email Notification Plugins :::
 
 SMTP Server :
